@@ -109,6 +109,8 @@ DeerFlow has newly integrated the intelligent search and crawling toolset indepe
    OPENAI_API_KEY=your-openai-api-key
    # Add other provider keys as needed
    INFOQUEST_API_KEY=your-infoquest-api-key
+   CUSTOM_SEARCH_API_URL=https://your-custom-search-endpoint
+   CUSTOM_SEARCH_API_KEY=your-custom-search-api-key
    ```
 
 - Option B: Export environment variables in your shell

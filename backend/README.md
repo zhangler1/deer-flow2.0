@@ -294,7 +294,8 @@ MCP servers and skill states in a single file:
 - `DEER_FLOW_CONFIG_PATH` - Override config.yaml location
 - `DEER_FLOW_EXTENSIONS_CONFIG_PATH` - Override extensions_config.json location
 - Model API keys: `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `DEEPSEEK_API_KEY`, etc.
-- Tool API keys: `TAVILY_API_KEY`, `GITHUB_TOKEN`, etc.
+- Tool API keys: `TAVILY_API_KEY`, `CUSTOM_SEARCH_API_KEY`, `GITHUB_TOKEN`, etc.
+- Custom search endpoint: `CUSTOM_SEARCH_API_URL`
 
 ---
 

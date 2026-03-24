@@ -130,6 +130,25 @@ tools:
     max_results: 5
     # api_key: $TAVILY_API_KEY  # Set if needed
 
+  # Web search tool (uses custom search backend)
+  # Keep the same tool name `web_search` and switch the provider by changing `use`.
+  # - name: web_search
+  #   group: web
+  #   use: src.community.custom_search.tools:web_search_tool
+  #   api_url: $CUSTOM_SEARCH_API_URL
+  #   api_key: $CUSTOM_SEARCH_API_KEY
+  #   timeout: 30
+  #   max_results: 5
+  #   # Optional: override the default repository defined in `custom_search`
+  #   # default_repository: dynamic_search
+
+  # Online search tool (fixed to the online-search repository in the custom backend)
+  # - name: online_search
+  #   group: web
+  #   use: src.community.online_search.tools:online_search_tool
+  #   timeout: 30
+  #   max_results: 10
+
   # Web search tool (requires InfoQuest API key)
   # - name: web_search
   #   group: web
@@ -182,6 +201,43 @@ tools:
   - name: bash
     group: bash
     use: src.sandbox.tools:bash_tool
+
+# ============================================================================
+# Custom Search Configuration
+# ============================================================================
+# Optional repository mapping for src.community.custom_search.tools:web_search_tool
+# Also used by src.community.online_search.tools:online_search_tool
+
+# custom_search:
+#   default_repository: aggregation_search
+#   repositories:
+#     aggregation_search:
+#       name: 聚合搜索
+#       description: 聚合多个数据源的搜索服务
+#       repository: aggregation-search
+#       channel_id: "0"
+#     vector_search:
+#       name: 向量库
+#       description: 基于向量相似度的搜索服务
+#       repository: euvd-searchByChannelId
+#       channel_id: "0"
+#     dynamic_search:
+#       name: 交行知道
+#       description: 交通银行内部知识库搜索
+#       repository: okic-dynamicSearch
+#       channel_id: "0"
+#     online_search:
+#       name: 互联网检索
+#       description: 互联网公开信息搜索服务
+#       repository: online-search
+#       channel_id: "0"
+#   # Optional: provide MUWP user info here instead of environment variables
+#   # muwp_user:
+#   #   muwp_branchID: "1000027159"
+#   #   muwp_loginName: your_login_name
+#   #   muwp_userCode: your_user_code
+#   #   muwp_userName: your_user_name
+#   #   muwp_userID: your_user_id
 
 # ============================================================================
 # Sandbox Configuration

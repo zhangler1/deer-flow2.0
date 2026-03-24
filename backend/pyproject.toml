@@ -24,6 +24,7 @@ dependencies = [
     "pydantic>=2.12.5",
     "python-multipart>=0.0.20",
     "pyyaml>=6.0.3",
+    "requests>=2.32.0",
     "readabilipy>=0.3.0",
     "sse-starlette>=2.1.0",
     "tavily-python>=0.7.17",

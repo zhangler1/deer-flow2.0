@@ -51,6 +51,23 @@ tools:
     max_results: 5
     api_key: $TAVILY_API_KEY
 
+  # 自定义搜索后端示例
+  # 如果要切换到内网/自定义检索，请保留 name=web_search 并修改 use：
+  # - name: web_search
+  #   group: web
+  #   use: src.community.custom_search.tools:web_search_tool
+  #   api_url: $CUSTOM_SEARCH_API_URL
+  #   api_key: $CUSTOM_SEARCH_API_KEY
+  #   timeout: 30
+  #   max_results: 5
+
+  # 联网搜索工具示例
+  # - name: online_search
+  #   group: web
+  #   use: src.community.online_search.tools:online_search_tool
+  #   timeout: 30
+  #   max_results: 10
+
   # Web 抓取
   - name: web_fetch
     group: web
@@ -84,6 +101,34 @@ tools:
   - name: bash
     group: bash
     use: src.sandbox.tools:bash_tool
+
+# ============================================================================
+# Custom Search Configuration
+# ============================================================================
+# 该配置同时供 web_search(custom_search provider) 和 online_search 使用
+# custom_search:
+#   default_repository: aggregation_search
+#   repositories:
+#     aggregation_search:
+#       name: 聚合搜索
+#       description: 聚合多个数据源的搜索服务
+#       repository: aggregation-search
+#       channel_id: "0"
+#     vector_search:
+#       name: 向量库
+#       description: 基于向量相似度的搜索服务
+#       repository: euvd-searchByChannelId
+#       channel_id: "0"
+#     dynamic_search:
+#       name: 交行知道
+#       description: 交通银行内部知识库搜索
+#       repository: okic-dynamicSearch
+#       channel_id: "0"
+#     online_search:
+#       name: 互联网检索
+#       description: 互联网公开信息搜索服务
+#       repository: online-search
+#       channel_id: "0"
 
 # ============================================================================
 # Sandbox Configuration - 生产环境优化

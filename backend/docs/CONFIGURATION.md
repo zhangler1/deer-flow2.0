@@ -80,8 +80,46 @@ tools:
     # api_key: $TAVILY_API_KEY  # Optional
 ```
 
-**Built-in Tools**:
-- `web_search` - Search the web (Tavily)
+You can also swap the `web_search` provider to the migrated custom search backend:
+
+```yaml
+tools:
+  - name: web_search
+    group: web
+    use: src.community.custom_search.tools:web_search_tool
+    api_url: $CUSTOM_SEARCH_API_URL
+    api_key: $CUSTOM_SEARCH_API_KEY
+    timeout: 30
+    max_results: 5
+
+custom_search:
+  default_repository: aggregation_search
+  repositories:
+    aggregation_search:
+      name: 聚合搜索
+      description: 聚合多个数据源的搜索服务
+      repository: aggregation-search
+      channel_id: "0"
+```
+
+`custom_search.repositories` is optional. If you omit it, DeerFlow falls back to built-in defaults for `aggregation_search`, `vector_search`, `dynamic_search`, and `online_search`.
+
+If you also want the dedicated `online_search` tool from deer-flow-1, add this optional tool entry:
+
+```yaml
+tools:
+  - name: online_search
+    group: web
+    use: src.community.online_search.tools:online_search_tool
+    timeout: 30
+    max_results: 10
+```
+
+`online_search` always targets the fixed `online-search` repository in the custom search backend.
+
+**Built-in / Common Tools**:
+- `web_search` - Search the web (Tavily, custom search backend, or another configured provider)
+- `online_search` - Search public internet information through the custom search backend's `online-search` repository
 - `web_fetch` - Fetch web pages (Jina AI)
 - `ls` - List directory contents
 - `read_file` - Read file contents
@@ -188,6 +226,9 @@ models:
 - `DEEPSEEK_API_KEY` - DeepSeek API key
 - `NOVITA_API_KEY` - Novita API key (OpenAI-compatible endpoint)
 - `TAVILY_API_KEY` - Tavily search API key
+- `CUSTOM_SEARCH_API_URL` - Custom search backend endpoint
+- `CUSTOM_SEARCH_API_KEY` - Custom search backend API key
+- `MUWP_BRANCH_ID`, `MUWP_LOGIN_NAME`, `MUWP_USER_CODE`, `MUWP_USER_NAME`, `MUWP_USER_ID` - Optional MUWP user metadata for the custom search backend
 - `DEER_FLOW_CONFIG_PATH` - Custom config file path
 
 ## Configuration Location

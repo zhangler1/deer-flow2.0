@@ -13,7 +13,11 @@ export function explainLastToolCall(message: AIMessage, t: Translations) {
 }
 
 export function explainToolCall(toolCall: ToolCall, t: Translations) {
-  if (toolCall.name === "web_search" || toolCall.name === "image_search") {
+  if (
+    toolCall.name === "web_search" ||
+    toolCall.name === "online_search" ||
+    toolCall.name === "image_search"
+  ) {
     return t.toolCalls.searchFor(toolCall.args.query);
   } else if (toolCall.name === "web_fetch") {
     return t.toolCalls.viewWebPage;
