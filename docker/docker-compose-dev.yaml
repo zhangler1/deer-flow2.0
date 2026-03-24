@@ -77,11 +77,12 @@ services:
 
   # Frontend - Next.js Development Server
   frontend:
-    build:
-      context: ../
-      dockerfile: frontend/Dockerfile
-      args:
-        PNPM_STORE_PATH: ${PNPM_STORE_PATH:-/root/.local/share/pnpm/store}
+    # build:
+    #   context: ../
+    #   dockerfile: frontend/Dockerfile
+    #   args:
+    #     PNPM_STORE_PATH: ${PNPM_STORE_PATH:-/root/.local/share/pnpm/store}
+    image: deer-flow-frontend:2
     container_name: deer-flow-frontend
     command: sh -c "cd frontend && pnpm run dev > /app/logs/frontend.log 2>&1"
     volumes:
@@ -104,12 +105,13 @@ services:
 
   # Backend - Gateway API
   gateway:
-    build:
-      context: ../
-      dockerfile: backend/Dockerfile
-      # cache_from disabled - requires manual setup: mkdir -p /tmp/docker-cache-gateway
+    # build:
+    #   context: ../
+    #   dockerfile: backend/Dockerfile
+    #   # cache_from disabled - requires manual setup: mkdir -p /tmp/docker-cache-gateway
+    image: deer-flow-backend:2
     container_name: deer-flow-gateway
-    command: sh -c "cd backend && uv run uvicorn src.gateway.app:app --host 0.0.0.0 --port 8001 --reload --reload-include='*.yaml .env' > /app/logs/gateway.log 2>&1"
+    command: sh -c "cd backend && uv run uvicorn src.gateway.app:app --host 0.0.0.0 --port 8001 --reload --reload-include='*.yaml .env' 2>&1 >  /app/logs/gateway.log "
     volumes:
       - ../backend/:/app/backend/
       # Preserve the .venv built during Docker image build — mounting the full backend/
@@ -140,12 +142,13 @@ services:
 
   # Backend - LangGraph Server
   langgraph:
-    build:
-      context: ../
-      dockerfile: backend/Dockerfile
-      # cache_from disabled - requires manual setup: mkdir -p /tmp/docker-cache-langgraph
+    # build:
+    #   context: ../
+    #   dockerfile: backend/Dockerfile
+    #   # cache_from disabled - requires manual setup: mkdir -p /tmp/docker-cache-langgraph
+    image: deer-flow-backend:2
     container_name: deer-flow-langgraph
-    command: sh -c "cd backend && uv run langgraph dev --no-browser --allow-blocking --host 0.0.0.0 --port 2024 > /app/logs/langgraph.log 2>&1"
+    command: sh -c "cd backend && uv run langgraph dev --no-browser --allow-blocking --host 0.0.0.0 --port 2024 2>&1 > /app/logs/langgraph.log"
     volumes:
       - ../backend/:/app/backend/
       # Preserve the .venv built during Docker image build — mounting the full backend/

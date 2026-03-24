@@ -13,7 +13,7 @@ RUN pnpm config set store-dir ${PNPM_STORE_PATH}
 WORKDIR /app
 
 # Copy frontend source code
-COPY frontend ./frontend
+COPY ./ ./frontend
 
 # Install dependencies
 RUN sh -c "cd /app/frontend && pnpm install --frozen-lockfile"

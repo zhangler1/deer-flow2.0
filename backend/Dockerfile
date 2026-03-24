@@ -17,7 +17,7 @@ COPY --from=ghcr.io/astral-sh/uv:0.7.20 /uv /uvx /usr/local/bin/
 WORKDIR /app
 
 # Copy frontend source code
-COPY backend ./backend
+COPY ./ ./backend
 
 # Install dependencies with cache mount
 RUN --mount=type=cache,target=/root/.cache/uv \

@@ -21,6 +21,13 @@ This directory contains detailed documentation for the DeerFlow backend.
 | [plan_mode_usage.md](plan_mode_usage.md) | Plan mode with TodoList |
 | [AUTO_TITLE_GENERATION.md](AUTO_TITLE_GENERATION.md) | Automatic title generation |
 
+## Deployment Documentation
+
+| Document | Description |
+|----------|-------------|
+| [KUBERNETES.md](KUBERNETES.md) | Kubernetes deployment guide |
+| [SCALING.md](SCALING.md) | Scaling to 10,000+ users |
+
 ## Development
 
 | Document | Description |

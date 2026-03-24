@@ -1,0 +1,263 @@
+# DeerFlow 生产环境配置
+# 支持 1万+ 用户的优化配置
+
+# ============================================================================
+# Models Configuration - 生产环境推荐
+# ============================================================================
+models:
+  # 使用性价比更高的模型
+  - name: deepseek-v3
+    display_name: DeepSeek V3
+    use: src.models.patched_deepseek:PatchedChatDeepSeek
+    model: deepseek-chat
+    api_key: $DEEPSEEK_API_KEY
+    max_tokens: 8192
+    temperature: 0.7
+    supports_thinking: true
+    supports_vision: false
+    when_thinking_enabled:
+      extra_body:
+        thinking:
+          type: enabled
+
+  # 备用模型 (负载均衡)
+  - name: kimi-k2.5
+    display_name: Kimi K2.5
+    use: src.models.patched_deepseek:PatchedChatDeepSeek
+    model: kimi-k2.5
+    api_base: https://api.moonshot.cn/v1
+    api_key: $MOONSHOT_API_KEY
+    max_tokens: 16384
+    supports_thinking: true
+    supports_vision: true
+
+# ============================================================================
+# Tool Groups
+# ============================================================================
+tool_groups:
+  - name: web
+  - name: file:read
+  - name: file:write
+  - name: bash
+
+# ============================================================================
+# Tools Configuration
+# ============================================================================
+tools:
+  # Web 搜索
+  - name: web_search
+    group: web
+    use: src.community.tavily.tools:web_search_tool
+    max_results: 5
+    api_key: $TAVILY_API_KEY
+
+  # Web 抓取
+  - name: web_fetch
+    group: web
+    use: src.community.jina_ai.tools:web_fetch_tool
+    timeout: 10
+
+  # 图片搜索
+  - name: image_search
+    group: web
+    use: src.community.image_search.tools:image_search_tool
+    max_results: 5
+
+  # 文件操作
+  - name: ls
+    group: file:read
+    use: src.sandbox.tools:ls_tool
+
+  - name: read_file
+    group: file:read
+    use: src.sandbox.tools:read_file_tool
+
+  - name: write_file
+    group: file:write
+    use: src.sandbox.tools:write_file_tool
+
+  - name: str_replace
+    group: file:write
+    use: src.sandbox.tools:str_replace_tool
+
+  # Bash 执行
+  - name: bash
+    group: bash
+    use: src.sandbox.tools:bash_tool
+
+# ============================================================================
+# Sandbox Configuration - 生产环境优化
+# ============================================================================
+sandbox:
+  use: src.community.aio_sandbox:AioSandboxProvider
+  
+  # 大幅提升并发能力
+  replicas: 100  # 支持 100 个并发沙箱
+  
+  # 基础端口
+  port: 8080
+  
+  # 容器资源限制
+  resources:
+    cpu_limit: "1.0"
+    memory_limit: "1Gi"
+  
+  # 容器镜像
+  image: enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:latest
+  
+  # 超时配置
+  timeout_seconds: 300    # 5分钟
+  idle_timeout: 600       # 10分钟空闲后回收
+  
+  # 环境变量
+  environment:
+    PYTHONUNBUFFERED: "1"
+    NODE_ENV: production
+
+  # 可选: 使用 Kubernetes Provisioner (更好的隔离和扩展性)
+  # provisioner_url: http://provisioner:8002
+
+# ============================================================================
+# Subagents Configuration
+# ============================================================================
+subagents:
+  # 默认超时 15 分钟
+  timeout_seconds: 900
+  
+  # 针对不同 agent 的超时配置
+  agents:
+    general-purpose:
+      timeout_seconds: 1800  # 30 分钟
+    bash:
+      timeout_seconds: 300   # 5 分钟
+
+# ============================================================================
+# Skills Configuration
+# ============================================================================
+skills:
+  # 技能目录路径 (生产环境使用绝对路径)
+  path: /app/skills
+  
+  # 容器内挂载路径
+  container_path: /mnt/skills
+
+# ============================================================================
+# Title Generation - 自动生成标题
+# ============================================================================
+title:
+  enabled: true
+  max_words: 6
+  max_chars: 60
+  # 使用默认模型
+  model_name: null
+
+# ============================================================================
+# Summarization - 上下文摘要 (高并发场景重要)
+# ============================================================================
+summarization:
+  enabled: true
+  
+  # 使用默认模型进行摘要
+  model_name: null
+  
+  # 触发条件: 当 token 数量达到 15000 时
+  trigger:
+    - type: tokens
+      value: 15000
+  
+  # 保留最近 10 条消息
+  keep:
+    type: messages
+    value: 10
+  
+  # 摘要前最大 token 数
+  trim_tokens_to_summarize: 15000
+
+# ============================================================================
+# Memory Configuration - 用户记忆
+# ============================================================================
+memory:
+  enabled: true
+  storage_path: /app/backend/.deer-flow/memory.json
+  debounce_seconds: 30
+  model_name: null
+  max_facts: 100
+  fact_confidence_threshold: 0.7
+  injection_enabled: true
+  max_injection_tokens: 2000
+
+# ============================================================================
+# Checkpointer - PostgreSQL (生产环境必需)
+# ============================================================================
+checkpointer:
+  type: postgres
+  connection_string: postgresql://deerflow:${DB_PASSWORD}@postgres:5432/deerflow
+  
+  # 连接池配置 (可选,根据实际情况调整)
+  pool_size: 20
+  max_overflow: 10
+  pool_timeout: 30
+  pool_recycle: 3600
+
+# ============================================================================
+# IM Channels Configuration (可选)
+# ============================================================================
+# channels:
+#   langgraph_url: http://localhost:2024
+#   gateway_url: http://localhost:8001
+#   
+#   session:
+#     assistant_id: lead_agent
+#     config:
+#       recursion_limit: 100
+#     context:
+#       thinking_enabled: true
+#       is_plan_mode: false
+#       subagent_enabled: false
+#   
+#   feishu:
+#     enabled: false
+#     app_id: $FEISHU_APP_ID
+#     app_secret: $FEISHU_APP_SECRET
+#   
+#   slack:
+#     enabled: false
+#     bot_token: $SLACK_BOT_TOKEN
+#     app_token: $SLACK_APP_TOKEN
+#   
+#   telegram:
+#     enabled: false
+#     bot_token: $TELEGRAM_BOT_TOKEN
+
+# ============================================================================
+# 生产环境特定配置
+# ============================================================================
+
+# 日志级别
+logging:
+  level: INFO
+  format: json  # 方便日志聚合工具解析
+
+# 性能监控
+monitoring:
+  enabled: true
+  prometheus_port: 9090
+
+# 限流配置
+rate_limiting:
+  enabled: true
+  default_rate: "10/minute"  # 每分钟 10 次
+  burst_size: 20
+
+# 安全配置
+security:
+  enable_cors: true
+  allowed_origins:
+    - "https://your-domain.com"
+    - "https://www.your-domain.com"
+  
+  # API 密钥验证 (可选)
+  require_api_key: false
+  api_keys:
+    - $API_KEY_1
+    - $API_KEY_2

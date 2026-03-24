@@ -1,0 +1,363 @@
+# DeerFlow Production Environment
+# 支持 1万+ 用户的生产部署配置
+#
+# 使用方法:
+#   1. 配置环境变量: cp .env.example .env.production
+#   2. 启动服务: docker-compose -f docker/docker-compose-production.yaml up -d
+#   3. 查看日志: docker-compose -f docker/docker-compose-production.yaml logs -f
+#
+# 访问地址: http://localhost (80端口)
+
+version: '3.8'
+
+services:
+  # ═══════════════════════════════════════════════════════════════
+  # 数据层
+  # ═══════════════════════════════════════════════════════════════
+  
+  # PostgreSQL 主数据库
+  postgres:
+    image: postgres:16-alpine
+    container_name: deer-flow-postgres
+    environment:
+      POSTGRES_DB: deerflow
+      POSTGRES_USER: deerflow
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      # 性能优化参数
+      POSTGRES_SHARED_BUFFERS: 256MB
+      POSTGRES_EFFECTIVE_CACHE_SIZE: 1GB
+      POSTGRES_MAX_CONNECTIONS: 200
+      POSTGRES_WORK_MEM: 16MB
+      POSTGRES_MAINTENANCE_WORK_MEM: 64MB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - deer-flow-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 4G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U deerflow"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: deer-flow-redis
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --tcp-backlog 511
+      --timeout 300
+      --tcp-keepalive 60
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - deer-flow-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 应用层 - Gateway 服务 (5个实例)
+  # ═══════════════════════════════════════════════════════════════
+  
+  gateway:
+    image: deer-flow-backend:latest
+    command: |
+      sh -c "cd backend && 
+      uv run uvicorn src.gateway.app:app 
+      --host 0.0.0.0 
+      --port 8001 
+      --workers 2 
+      --limit-concurrency 1000 
+      --timeout-keep-alive 5 
+      --log-level info"
+    environment:
+      # 数据库配置
+      - DATABASE_URL=postgresql://deerflow:${DB_PASSWORD:-changeme}@postgres:5432/deerflow
+      - REDIS_URL=redis://redis:6379/0
+      
+      # 应用配置
+      - DEER_FLOW_HOST_BASE_DIR=/app/backend/.deer-flow
+      - DEER_FLOW_HOST_SKILLS_PATH=/app/skills
+      - DEER_FLOW_SANDBOX_HOST=host.docker.internal
+      
+      # 性能优化
+      - PYTHONUNBUFFERED=1
+      - WORKER_ID=${HOSTNAME}
+      
+      # 生产环境标识
+      - ENVIRONMENT=production
+      - CI=true
+    env_file:
+      - ../.env.production
+    volumes:
+      - ../backend/src:/app/backend/src:ro
+      - ../config.yaml:/app/config.yaml:ro
+      - ../extensions_config.json:/app/extensions_config.json:ro
+      - ../skills:/app/skills:ro
+      - gateway_storage:/app/backend/.deer-flow
+      - ../logs:/app/logs
+      # Docker-in-Docker for sandbox
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - deer-flow-prod
+    deploy:
+      replicas: 5  # 5个实例
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 应用层 - LangGraph 服务 (5个实例)
+  # ═══════════════════════════════════════════════════════════════
+  
+  langgraph:
+    image: deer-flow-backend:latest
+    command: |
+      sh -c "cd backend && 
+      uv run langgraph dev 
+      --host 0.0.0.0 
+      --port 2024 
+      --no-browser 
+      --allow-blocking"
+    environment:
+      - DATABASE_URL=postgresql://deerflow:${DB_PASSWORD:-changeme}@postgres:5432/deerflow
+      - REDIS_URL=redis://redis:6379/1
+      - DEER_FLOW_HOST_BASE_DIR=/app/backend/.deer-flow
+      - DEER_FLOW_HOST_SKILLS_PATH=/app/skills
+      - DEER_FLOW_SANDBOX_HOST=host.docker.internal
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=production
+      - CI=true
+    env_file:
+      - ../.env.production
+    volumes:
+      - ../backend/src:/app/backend/src:ro
+      - ../config.yaml:/app/config.yaml:ro
+      - ../extensions_config.json:/app/extensions_config.json:ro
+      - ../skills:/app/skills:ro
+      - langgraph_storage:/app/backend/.deer-flow
+      - ../logs:/app/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - deer-flow-prod
+    deploy:
+      replicas: 5
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:2024/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 前端层 - Next.js 服务 (3个实例)
+  # ═══════════════════════════════════════════════════════════════
+  
+  frontend:
+    image: deer-flow-frontend:latest
+    command: sh -c "cd frontend && pnpm run start"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    env_file:
+      - ../frontend/.env.production
+    volumes:
+      - ../frontend/public:/app/frontend/public:ro
+    networks:
+      - deer-flow-prod
+    deploy:
+      replicas: 3
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 负载均衡层 - Nginx
+  # ═══════════════════════════════════════════════════════════════
+  
+  nginx:
+    image: nginx:alpine
+    container_name: deer-flow-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx-production.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ../logs/nginx:/var/log/nginx
+    networks:
+      - deer-flow-prod
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '1'
+          memory: 512M
+    depends_on:
+      - gateway
+      - langgraph
+      - frontend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ═══════════════════════════════════════════════════════════════
+  # 监控层 (可选)
+  # ═══════════════════════════════════════════════════════════════
+  
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: deer-flow-prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - deer-flow-prod
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: deer-flow-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_INSTALL_PLUGINS=redis-datasource
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    ports:
+      - "3001:3000"
+    networks:
+      - deer-flow-prod
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+# ═══════════════════════════════════════════════════════════════
+# 数据卷
+# ═══════════════════════════════════════════════════════════════
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  gateway_storage:
+    driver: local
+  langgraph_storage:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════
+# 网络
+# ═══════════════════════════════════════════════════════════════
+
+networks:
+  deer-flow-prod:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
