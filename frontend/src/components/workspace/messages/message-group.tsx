@@ -204,10 +204,12 @@ function ToolCall({
   const { setOpen, autoOpen, autoSelect, selectedArtifact, select } =
     useArtifacts();
 
-  if (name === "web_search" || name === "online_search") {
+  if (name === "web_search" || name === "online_search" || name === "vector_search") {
     let label: React.ReactNode = t.toolCalls.searchForRelatedInfo;
     if (typeof args.query === "string") {
       label = t.toolCalls.searchOnWebFor(args.query);
+    } else if (typeof args.keyword === "string") {
+      label = t.toolCalls.searchOnWebFor(args.keyword);
     }
     return (
       <ChainOfThoughtStep key={id} label={label} icon={SearchIcon}>

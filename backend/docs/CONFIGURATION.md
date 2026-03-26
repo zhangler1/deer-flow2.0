@@ -117,9 +117,31 @@ tools:
 
 `online_search` always targets the fixed `online-search` repository in the custom search backend.
 
+To enable the migrated `vector_search` tool, add this optional tool entry:
+
+```yaml
+tools:
+  - name: vector_search
+    group: web
+    use: src.community.vector_search.tools:vector_search_tool
+    timeout: 30
+
+vector_search:
+  api_url: $VECTOR_SEARCH_API_URL
+  user_code: "147852"
+  search_type: "0"
+  vector_top_n: 10
+  spaceCodeList: ["SP0000082"]
+  caller: "P2025094"
+  customized_tag_list: ["s1"]
+```
+
+`vector_search` calls the dedicated structured knowledge backend and returns formatted retrieval summaries instead of generic web search results.
+
 **Built-in / Common Tools**:
 - `web_search` - Search the web (Tavily, custom search backend, or another configured provider)
 - `online_search` - Search public internet information through the custom search backend's `online-search` repository
+- `vector_search` - Search the dedicated structured knowledge backend for indexed content
 - `web_fetch` - Fetch web pages (Jina AI)
 - `ls` - List directory contents
 - `read_file` - Read file contents

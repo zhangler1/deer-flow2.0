@@ -149,6 +149,20 @@ tools:
   #   timeout: 30
   #   max_results: 10
 
+  # Vector search tool (uses the dedicated structured knowledge backend)
+  # - name: vector_search
+  #   group: web
+  #   use: src.community.vector_search.tools:vector_search_tool
+  #   timeout: 30
+  #   api_url: $VECTOR_SEARCH_API_URL
+  #   # Optional request payload overrides
+  #   # user_code: "147852"
+  #   # search_type: "0"
+  #   # vector_top_n: 10
+  #   # spaceCodeList: ["SP0000082"]
+  #   # caller: "P2025094"
+  #   # customized_tag_list: ["s1"]
+
   # Web search tool (requires InfoQuest API key)
   # - name: web_search
   #   group: web
@@ -238,6 +252,22 @@ tools:
 #   #   muwp_userCode: your_user_code
 #   #   muwp_userName: your_user_name
 #   #   muwp_userID: your_user_id
+
+# Optional default settings for src.community.vector_search.tools:vector_search_tool
+# The tool supports VECTOR_SEARCH_* env vars and also falls back to PRODUCT_SEARCH_* / EUVD_API_URL for compatibility.
+#
+# vector_search:
+#   api_url: $VECTOR_SEARCH_API_URL
+#   timeout: 30
+#   user_code: "147852"
+#   search_type: "0"
+#   vector_top_n: 10
+#   spaceCodeList: ["SP0000082"]
+#   caller: "P2025094"
+#   customized_tag_list: ["s1"]
+#   headers:
+#     caller: sjyh
+#     jumpcloud-ENV: BASE
 
 # ============================================================================
 # Sandbox Configuration

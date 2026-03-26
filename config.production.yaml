@@ -68,6 +68,12 @@ tools:
   #   timeout: 30
   #   max_results: 10
 
+  # 向量检索工具示例
+  # - name: vector_search
+  #   group: web
+  #   use: src.community.vector_search.tools:vector_search_tool
+  #   timeout: 30
+
   # Web 抓取
   - name: web_fetch
     group: web
@@ -129,6 +135,16 @@ tools:
 #       description: 互联网公开信息搜索服务
 #       repository: online-search
 #       channel_id: "0"
+#
+# vector_search:
+#   api_url: $VECTOR_SEARCH_API_URL
+#   timeout: 30
+#   user_code: "147852"
+#   search_type: "0"
+#   vector_top_n: 10
+#   spaceCodeList: ["SP0000082"]
+#   caller: "P2025094"
+#   customized_tag_list: ["s1"]
 
 # ============================================================================
 # Sandbox Configuration - 生产环境优化
