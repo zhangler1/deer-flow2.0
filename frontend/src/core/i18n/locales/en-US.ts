@@ -242,6 +242,9 @@ export const enUS: Translations = {
     useTool: (toolName: string) => `Use "${toolName}" tool`,
     searchFor: (query: string) => `Search for "${query}"`,
     searchForRelatedInfo: "Search for related information",
+    searchInInternalKnowledgeBase: "Search the internal knowledge base",
+    searchInInternalKnowledgeBaseFor: (query: string) =>
+      `Search the internal knowledge base for "${query}"`,
     searchForRelatedImages: "Search for related images",
     searchForRelatedImagesFor: (query: string) =>
       `Search for related images for "${query}"`,

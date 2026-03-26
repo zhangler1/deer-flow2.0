@@ -132,8 +132,10 @@ vector_search:
   search_type: "0"
   vector_top_n: 10
   spaceCodeList: ["SP0000082"]
+  pubTimeStart: "2024-12-29 00:00:00"
+  pubTimeEnd: "2025-01-29 23:59:59"
   caller: "P2025094"
-  customized_tag_list: ["s1"]
+  customizedTagList: ["s1"]
 ```
 
 `vector_search` calls the dedicated structured knowledge backend and returns formatted retrieval summaries instead of generic web search results.

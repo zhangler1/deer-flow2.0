@@ -204,12 +204,30 @@ function ToolCall({
   const { setOpen, autoOpen, autoSelect, selectedArtifact, select } =
     useArtifacts();
 
-  if (name === "web_search" || name === "online_search" || name === "vector_search") {
+  if (name === "vector_search") {
+    let label: React.ReactNode = t.toolCalls.searchInInternalKnowledgeBase;
+    if (typeof args.keyword === "string") {
+      label = t.toolCalls.searchInInternalKnowledgeBaseFor(args.keyword);
+    }
+    return (
+      <ChainOfThoughtStep key={id} label={label} icon={SearchIcon}>
+        {Array.isArray(result) && (
+          <ChainOfThoughtSearchResults>
+            {result.map((item) => (
+              <ChainOfThoughtSearchResult key={item.url}>
+                <a href={item.url} target="_blank" rel="noreferrer">
+                  {item.title}
+                </a>
+              </ChainOfThoughtSearchResult>
+            ))}
+          </ChainOfThoughtSearchResults>
+        )}
+      </ChainOfThoughtStep>
+    );
+  } else if (name === "web_search" || name === "online_search") {
     let label: React.ReactNode = t.toolCalls.searchForRelatedInfo;
     if (typeof args.query === "string") {
       label = t.toolCalls.searchOnWebFor(args.query);
-    } else if (typeof args.keyword === "string") {
-      label = t.toolCalls.searchOnWebFor(args.keyword);
     }
     return (
       <ChainOfThoughtStep key={id} label={label} icon={SearchIcon}>

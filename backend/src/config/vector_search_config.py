@@ -7,8 +7,9 @@ from typing import Any
 
 from src.config import get_app_config
 
+MISSING = object()
+
 DEFAULT_SPACE_CODE_LIST = ["SP0000082"]
-DEFAULT_CUSTOMIZED_TAG_LIST = ["s1"]
 DEFAULT_HEADERS = {
     "Accept": "*/*",
     "Accept-Encoding": "gzip, deflate, br",
@@ -30,7 +31,9 @@ class VectorSearchConfig:
     vector_top_n: int
     space_code_list: list[str]
     caller: str
-    customized_tag_list: list[str]
+    customized_tag_list: list[str] | None
+    pub_time_start: str
+    pub_time_end: str
     headers: dict[str, str]
     cookies: dict[str, str]
 
@@ -66,12 +69,21 @@ def _merge_dict_values(*values: Any) -> dict[str, str]:
     return merged
 
 
-def _coerce_str_list(value: Any, default: list[str]) -> list[str]:
+def _first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not MISSING:
+            return value
+    return None
+
+
+def _coerce_str_list(value: Any, default: list[str], allow_empty: bool = False) -> list[str]:
     if value is None:
         return list(default)
     if isinstance(value, list):
         items = [str(item) for item in value if item is not None]
-        return items or list(default)
+        if items:
+            return items
+        return [] if allow_empty else list(default)
     if isinstance(value, str):
         stripped = value.strip()
         if not stripped:
@@ -82,9 +94,37 @@ def _coerce_str_list(value: Any, default: list[str]) -> list[str]:
             parsed = None
         if isinstance(parsed, list):
             items = [str(item) for item in parsed if item is not None]
-            return items or list(default)
+            if items:
+                return items
+            return [] if allow_empty else list(default)
         return [item.strip() for item in stripped.split(",") if item.strip()] or list(default)
     return list(default)
+
+
+def _coerce_optional_str_list(value: Any, allow_empty: bool = False) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, list):
+        items = [str(item) for item in value if item is not None]
+        if items:
+            return items
+        return [] if allow_empty else None
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return None
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            parsed = None
+        if isinstance(parsed, list):
+            items = [str(item) for item in parsed if item is not None]
+            if items:
+                return items
+            return [] if allow_empty else None
+        split_items = [item.strip() for item in stripped.split(",") if item.strip()]
+        return split_items or None
+    return None
 
 
 def get_vector_search_config(tool_name: str = "vector_search") -> VectorSearchConfig:
@@ -108,6 +148,34 @@ def get_vector_search_config(tool_name: str = "vector_search") -> VectorSearchCo
         "vector_top_n",
         section.get("vector_top_n", os.getenv("VECTOR_SEARCH_VECTOR_TOP_N") or os.getenv("PRODUCT_SEARCH_VECTOR_TOP_N", 10)),
     )
+    space_code_list_value = _first_present(
+        tool_extra.get("spaceCodeList", MISSING),
+        tool_extra.get("space_code_list", MISSING),
+        section.get("spaceCodeList", MISSING),
+        section.get("space_code_list", MISSING),
+    )
+    customized_tag_list_value = _first_present(
+        tool_extra.get("customizedTagList", MISSING),
+        tool_extra.get("customized_tag_list", MISSING),
+        section.get("customizedTagList", MISSING),
+        section.get("customized_tag_list", MISSING),
+    )
+    pub_time_start_value = _first_present(
+        tool_extra.get("pubTimeStart", MISSING),
+        tool_extra.get("pub_time_start", MISSING),
+        section.get("pubTimeStart", MISSING),
+        section.get("pub_time_start", MISSING),
+        os.getenv("VECTOR_SEARCH_PUB_TIME_START"),
+        os.getenv("PRODUCT_SEARCH_PUB_TIME_START"),
+    )
+    pub_time_end_value = _first_present(
+        tool_extra.get("pubTimeEnd", MISSING),
+        tool_extra.get("pub_time_end", MISSING),
+        section.get("pubTimeEnd", MISSING),
+        section.get("pub_time_end", MISSING),
+        os.getenv("VECTOR_SEARCH_PUB_TIME_END"),
+        os.getenv("PRODUCT_SEARCH_PUB_TIME_END"),
+    )
 
     return VectorSearchConfig(
         api_url=api_url,
@@ -116,17 +184,16 @@ def get_vector_search_config(tool_name: str = "vector_search") -> VectorSearchCo
         search_type=str(tool_extra.get("search_type") or section.get("search_type") or os.getenv("VECTOR_SEARCH_SEARCH_TYPE") or os.getenv("PRODUCT_SEARCH_SEARCH_TYPE", "0")),
         vector_top_n=int(vector_top_n_value),
         space_code_list=_coerce_str_list(
-            tool_extra.get("spaceCodeList")
-            or tool_extra.get("space_code_list")
-            or section.get("spaceCodeList")
-            or section.get("space_code_list"),
+            space_code_list_value,
             DEFAULT_SPACE_CODE_LIST,
         ),
         caller=str(tool_extra.get("caller") or section.get("caller") or os.getenv("VECTOR_SEARCH_CALLER") or os.getenv("PRODUCT_SEARCH_CALLER", "P2025094")),
-        customized_tag_list=_coerce_str_list(
-            tool_extra.get("customized_tag_list", section.get("customized_tag_list")),
-            DEFAULT_CUSTOMIZED_TAG_LIST,
+        customized_tag_list=_coerce_optional_str_list(
+            customized_tag_list_value,
+            allow_empty=True,
         ),
+        pub_time_start=str(pub_time_start_value or ""),
+        pub_time_end=str(pub_time_end_value or ""),
         headers=_merge_dict_values(
             DEFAULT_HEADERS,
             section.get("headers"),

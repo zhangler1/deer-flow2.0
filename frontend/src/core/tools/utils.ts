@@ -13,10 +13,16 @@ export function explainLastToolCall(message: AIMessage, t: Translations) {
 }
 
 export function explainToolCall(toolCall: ToolCall, t: Translations) {
+  if (toolCall.name === "vector_search") {
+    const searchTerm = typeof toolCall.args.keyword === "string" ? toolCall.args.keyword : "";
+    return searchTerm
+      ? t.toolCalls.searchInInternalKnowledgeBaseFor(searchTerm)
+      : t.toolCalls.searchInInternalKnowledgeBase;
+  }
+
   if (
     toolCall.name === "web_search" ||
     toolCall.name === "online_search" ||
-    toolCall.name === "vector_search" ||
     toolCall.name === "image_search"
   ) {
     const searchTerm =

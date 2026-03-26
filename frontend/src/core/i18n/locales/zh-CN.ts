@@ -231,6 +231,9 @@ export const zhCN: Translations = {
     useTool: (toolName: string) => `使用 “${toolName}” 工具`,
     searchFor: (query: string) => `搜索 “${query}”`,
     searchForRelatedInfo: "搜索相关信息",
+    searchInInternalKnowledgeBase: "在行内知识库搜索",
+    searchInInternalKnowledgeBaseFor: (query: string) =>
+      `在行内知识库搜索 “${query}”`,
     searchForRelatedImages: "搜索相关图片",
     searchForRelatedImagesFor: (query: string) => `搜索相关图片 “${query}”`,
     searchOnWebFor: (query: string) => `在网络上搜索 “${query}”`,

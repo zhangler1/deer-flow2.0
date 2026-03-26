@@ -13,19 +13,26 @@ logger = logging.getLogger(__name__)
 
 
 def _build_request_body(keyword: str, config: VectorSearchConfig) -> dict[str, Any]:
+    param = {
+        "keyword": keyword,
+        "userCode": config.user_code,
+        "searchType": config.search_type,
+        "qaType": [0],
+        "vectorTopN": config.vector_top_n,
+        "spaceCodeList": config.space_code_list,
+        "caller": config.caller,
+    }
+    if config.customized_tag_list is not None:
+        param["customizedTagList"] = config.customized_tag_list
+    if config.pub_time_start:
+        param["pubTimeStart"] = config.pub_time_start
+    if config.pub_time_end:
+        param["pubTimeEnd"] = config.pub_time_end
+
     return {
         "REQ_HEAD": {},
         "REQ_BODY": {
-            "param": {
-                "keyword": keyword,
-                "userCode": config.user_code,
-                "searchType": config.search_type,
-                "qaType": [0],
-                "vectorTopN": config.vector_top_n,
-                "spaceCodeList": config.space_code_list,
-                "caller": config.caller,
-                "customizedTagList": config.customized_tag_list,
-            }
+            "param": param
         },
     }
 
@@ -93,6 +100,7 @@ def search_vector_backend(keyword: str, tool_name: str = "vector_search") -> str
         timeout=config.timeout,
     )
     response.raise_for_status()
+    logger.info("Vector search raw response body: %s", response.text)
 
     try:
         payload = response.json()
