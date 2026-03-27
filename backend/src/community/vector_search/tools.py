@@ -112,10 +112,19 @@ def search_vector_backend(keyword: str, tool_name: str = "vector_search") -> str
 
 @tool("vector_search", parse_docstring=True)
 def vector_search_tool(keyword: str) -> str:
-    """Search structured knowledge with the dedicated vector search backend.
+    """Search structured knowledge in the dedicated internal knowledge backend.
+
+    Prefer this tool when the user is asking for internal or domain-specific knowledge
+    instead of general web information. In particular, use this tool first when the
+    request mentions "交通银行", "交行", or phrases like "搜索交通银行xxx", "查询交通银行xxx",
+    "了解交通银行xxx", especially for products, policies, procedures, knowledge base entries,
+    FAQs, internal topics, or other structured enterprise content. If the user is
+    clearly asking for public internet information, use web search instead.
 
     Args:
-        keyword: Search keyword, such as an entity name, topic, region, customer segment, or a combined query.
+        keyword: Search keyword for the internal knowledge base, such as a bank entity
+            name, topic, product, policy, procedure, region, customer segment, or a
+            combined query like "交通银行 理财产品" or "交行 信用卡 积分规则".
     """
 
     try:
