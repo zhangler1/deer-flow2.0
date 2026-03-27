@@ -128,14 +128,25 @@ tools:
 
 vector_search:
   api_url: $VECTOR_SEARCH_API_URL
-  user_code: "147852"
-  search_type: "0"
+  page_size: 10
+  repository: aggregation-search
+  search_type: "2"
+  text_top_n: 7
   vector_top_n: 10
-  spaceCodeList: ["SP0000082"]
-  pubTimeStart: "2024-12-29 00:00:00"
-  pubTimeEnd: "2025-01-29 23:59:59"
-  caller: "P2025094"
-  customizedTagList: ["s1"]
+  spaceCodes: ["SP0999999"]
+  rerank_flag: 1
+  channel_id: "0"
+  qaType: [0, 1]
+  matchFields: ["title", "content", "attachTitles", "attachContent"]
+  knowStatus: ["3", "4"]
+  onlineStatus: ["3", "4"]
+  kpStatus: ["3", "4"]
+  muwp_user:
+    muwp_branchID: "1000027159"
+    muwp_loginName: your_login_name
+    muwp_userCode: your_user_code
+    muwp_userName: your_user_name
+    muwp_userID: your_user_id
 ```
 
 `vector_search` calls the dedicated structured knowledge backend and returns formatted retrieval summaries instead of generic web search results.

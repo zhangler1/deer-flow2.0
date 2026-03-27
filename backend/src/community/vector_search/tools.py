@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 from typing import Any
 
@@ -13,54 +12,63 @@ logger = logging.getLogger(__name__)
 
 
 def _build_request_body(keyword: str, config: VectorSearchConfig) -> dict[str, Any]:
-    param = {
-        "keyword": keyword,
-        "userCode": config.user_code,
-        "searchType": config.search_type,
-        "qaType": [0],
-        "vectorTopN": config.vector_top_n,
-        "spaceCodeList": config.space_code_list,
-        "caller": config.caller,
-    }
-    if config.customized_tag_list is not None:
-        param["customizedTagList"] = config.customized_tag_list
-    if config.pub_time_start:
-        param["pubTimeStart"] = config.pub_time_start
-    if config.pub_time_end:
-        param["pubTimeEnd"] = config.pub_time_end
-
     return {
-        "REQ_HEAD": {},
+        "REQ_HEAD": {
+            "TRANS_PROCESS": config.trans_process,
+            "TRAN_ID": config.tran_id,
+        },
         "REQ_BODY": {
-            "param": param
+            "param": {
+                "summaryQuestion": keyword,
+                "pageSize": config.page_size,
+                "repository": config.repository,
+                "param": {
+                    "searchType": config.search_type,
+                    "spaceCodes": config.space_codes,
+                    "rerankFlag": config.rerank_flag,
+                    "channelId": config.channel_id,
+                    "textTopN": config.text_top_n,
+                    "vectorTopN": config.vector_top_n,
+                    "qaType": config.qa_type,
+                    "matchFields": config.match_fields,
+                    "knowStatus": config.know_status,
+                    "onlineStatus": config.online_status,
+                    "kpStatus": config.kp_status,
+                },
+            },
+            "muwpUser": config.muwp_user,
         },
     }
 
 
 def _extract_entry_info(entry: dict[str, Any]) -> str:
-    title = str(entry.get("paraTitle") or "无标题")
-    content = str(entry.get("content") or "")
+    title = str(entry.get("title") or "无标题")
+    content = str(entry.get("content") or entry.get("absContent") or "")
     score_raw = entry.get("score")
-    rerank_score_raw = entry.get("rerankScore")
+    repository = str(entry.get("repository") or "")
+    url = str(entry.get("url") or "")
+    doc_id = str(entry.get("docId") or "")
 
     try:
-        score = float(score_raw) if score_raw not in (None, "") else 0.0
+        score = float(score_raw) if score_raw not in (None, "") else None
     except (TypeError, ValueError):
-        score = 0.0
+        score = None
 
-    info = f"名称: {title}\n匹配度: {score:.4f}"
-
-    try:
-        if rerank_score_raw not in (None, ""):
-            info += f"\n重排序得分: {float(rerank_score_raw):.4f}"
-    except (TypeError, ValueError):
-        info += f"\n重排序得分: {rerank_score_raw}"
+    info_lines = [f"名称: {title}"]
+    if score is not None:
+        info_lines.append(f"匹配度: {score:.4f}")
+    if repository:
+        info_lines.append(f"知识库: {repository}")
+    if doc_id:
+        info_lines.append(f"文档ID: {doc_id}")
+    if url:
+        info_lines.append(f"链接: {url}")
 
     if content:
         shortened_content = content if len(content) <= 300 else f"{content[:300]}..."
-        info += f"\n详情:\n{shortened_content}"
+        info_lines.append(f"详情:\n{shortened_content}")
 
-    return info
+    return "\n".join(info_lines)
 
 
 def _extract_results(payload: dict[str, Any], keyword: str) -> str:
@@ -68,10 +76,10 @@ def _extract_results(payload: dict[str, Any], keyword: str) -> str:
     if response_head and response_head.get("TRAN_SUCCESS") != "1":
         return f"API返回错误: {response_head.get('PROCESS_STATUS_CODE', '未知错误')}"
 
-    result_data = payload.get("RSP_BODY", {}).get("result", {})
-    vector_list = result_data.get("vectorGroupList", [])
-    text_list = result_data.get("textGroupList", [])
-    all_entries = vector_list if vector_list else text_list
+    all_entries = payload.get("RSP_BODY", {}).get("result", [])
+    if not isinstance(all_entries, list):
+        logger.warning("Vector search returned unexpected result payload: %s", all_entries)
+        all_entries = []
 
     if not all_entries:
         return f"未找到相关内容。关键词: {keyword}"
@@ -96,7 +104,7 @@ def search_vector_backend(keyword: str, tool_name: str = "vector_search") -> str
         config.api_url,
         headers=config.headers,
         cookies=config.cookies,
-        data={"REQ_MESSAGE": json.dumps(_build_request_body(keyword, config), ensure_ascii=False)},
+        json=_build_request_body(keyword, config),
         timeout=config.timeout,
     )
     response.raise_for_status()
