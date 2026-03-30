@@ -122,17 +122,23 @@ def search_vector_backend(keyword: str, tool_name: str = "vector_search") -> str
 def vector_search_tool(keyword: str) -> str:
     """Search structured knowledge in the dedicated internal knowledge backend.
 
-    Prefer this tool when the user is asking for internal or domain-specific knowledge
-    instead of general web information. In particular, use this tool first when the
-    request mentions "交通银行", "交行", or phrases like "搜索交通银行xxx", "查询交通银行xxx",
-    "了解交通银行xxx", especially for products, policies, procedures, knowledge base entries,
-    FAQs, internal topics, or other structured enterprise content. If the user is
-    clearly asking for public internet information, use web search instead.
+    Use this as the first search tool for nearly all fact-finding, lookup, explanation,
+    policy, product, procedure, FAQ, and domain-knowledge requests. Before using
+    `online_search`, try `vector_search` first, then only fall back to `online_search`
+    when this tool returns no relevant content, returns obviously insufficient content,
+    or cannot answer the user's question.
+
+    When forming the search keyword, keep it close to the user's original wording.
+    Do not automatically prepend or expand the query with broad qualifiers such as
+    "交通银行" unless the user explicitly mentioned them or they are truly necessary
+    to disambiguate the request. For line-of-business or internal-domain searches,
+    use the core topic directly instead of adding "交通银行" by default.
 
     Args:
-        keyword: Search keyword for the internal knowledge base, such as a bank entity
-            name, topic, product, policy, procedure, region, customer segment, or a
-            combined query like "交通银行 理财产品" or "交行 信用卡 积分规则".
+        keyword: Search keyword for the internal knowledge base. Prefer concise,
+            high-signal phrases taken from the user's request, such as a topic,
+            product, policy, procedure, activity, region, customer segment, or a
+            combined query like "理财产品", "信用卡 积分规则", or "深圳分行 特邀活动 奖励".
     """
 
     try:
